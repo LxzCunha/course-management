@@ -14,6 +14,10 @@ const config: Knex.Config = {
         directory: path.join(import.meta.dirname, "migrations"),
         extension: "ts",
     },
+    seeds: {
+        directory: path.join(import.meta.dirname, "seeds"),
+        extension: "ts",
+    },
 };
 
 export default config;

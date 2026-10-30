@@ -7,6 +7,7 @@
     "dist",
     "**/*spec.ts",
     "src/database/knexfile.ts",
-    "src/database/migrations"
+    "src/database/migrations",
+    "src/database/seeds"
   ]
 }
