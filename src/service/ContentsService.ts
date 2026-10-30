@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { CreateContentDto } from "../dto/CreateContentDto.js";
 import type { UpdateContentDto } from "../dto/UpdateContentDto.js";
 import { isForeignKeyViolation } from "../errors/DatabaseErrors.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
+import { ValidationError } from "../errors/ValidationError.js";
 import { ContentsRepository } from "../repository/ContentsRepository.js";
 
 @Injectable()
@@ -44,7 +45,7 @@ export class ContentsService {
 
     private rethrowConstraintError(error: unknown, data: UpdateContentDto): never {
         if (isForeignKeyViolation(error)) {
-            throw new BadRequestException(`Module ${data.moduleId} does not exist`);
+            throw new ValidationError(`Module ${data.moduleId} does not exist`);
         }
         throw error;
     }

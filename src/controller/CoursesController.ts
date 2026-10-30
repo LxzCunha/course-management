@@ -6,12 +6,12 @@ import {
     HttpCode,
     HttpStatus,
     Param,
-    ParseIntPipe,
     Patch,
     Post,
 } from "@nestjs/common";
 import { CreateCourseDto } from "../dto/CreateCourseDto.js";
 import { UpdateCourseDto } from "../dto/UpdateCourseDto.js";
+import { ParseIdPipe } from "../pipes/ParseIdPipe.js";
 import { CoursesService } from "../service/CoursesService.js";
 
 @Controller("courses")
@@ -24,7 +24,7 @@ export class CoursesController {
     }
 
     @Get(":id")
-    findById(@Param("id", ParseIntPipe) id: number) {
+    findById(@Param("id", ParseIdPipe) id: number) {
         return this.coursesService.findById(id);
     }
 
@@ -34,13 +34,13 @@ export class CoursesController {
     }
 
     @Patch(":id")
-    update(@Param("id", ParseIntPipe) id: number, @Body() body: UpdateCourseDto) {
+    update(@Param("id", ParseIdPipe) id: number, @Body() body: UpdateCourseDto) {
         return this.coursesService.update(id, body);
     }
 
     @Delete(":id")
     @HttpCode(HttpStatus.NO_CONTENT)
-    delete(@Param("id", ParseIntPipe) id: number) {
+    delete(@Param("id", ParseIdPipe) id: number) {
         return this.coursesService.delete(id);
     }
 }

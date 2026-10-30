@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import type { CreateModuleDto } from "../dto/CreateModuleDto.js";
 import type { UpdateModuleDto } from "../dto/UpdateModuleDto.js";
 import { getConstraintName, isForeignKeyViolation } from "../errors/DatabaseErrors.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
+import { ValidationError } from "../errors/ValidationError.js";
 import { ModulesRepository } from "../repository/ModulesRepository.js";
 
 @Injectable()
@@ -46,10 +47,10 @@ export class ModulesService {
         if (isForeignKeyViolation(error)) {
             const constraint = getConstraintName(error);
             if (constraint === "modules_course_id_foreign") {
-                throw new BadRequestException(`Course ${data.courseId} does not exist`);
+                throw new ValidationError(`Course ${data.courseId} does not exist`);
             }
             if (constraint === "modules_user_id_foreign") {
-                throw new BadRequestException(`User ${data.userId} does not exist`);
+                throw new ValidationError(`User ${data.userId} does not exist`);
             }
         }
         throw error;

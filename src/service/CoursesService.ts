@@ -1,8 +1,9 @@
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import type { CreateCourseDto } from "../dto/CreateCourseDto.js";
 import type { UpdateCourseDto } from "../dto/UpdateCourseDto.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../errors/DatabaseErrors.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
+import { ValidationError } from "../errors/ValidationError.js";
 import { CoursesRepository } from "../repository/CoursesRepository.js";
 
 @Injectable()
@@ -47,7 +48,7 @@ export class CoursesService {
             throw new ConflictException(`Course code ${data.code} is already in use`);
         }
         if (isForeignKeyViolation(error)) {
-            throw new BadRequestException(`User ${data.userId} does not exist`);
+            throw new ValidationError(`User ${data.userId} does not exist`);
         }
         throw error;
     }

@@ -1,4 +1,5 @@
-import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
+import { ParseIdPipe } from "../pipes/ParseIdPipe.js";
 import { ReportsService } from "../service/ReportsService.js";
 
 @Controller("reports")
@@ -26,7 +27,7 @@ export class ReportsController {
     }
 
     @Get("contents/:contentId/viewers")
-    getContentViewers(@Param("contentId", ParseIntPipe) contentId: number) {
+    getContentViewers(@Param("contentId", ParseIdPipe) contentId: number) {
         return this.reportsService.getContentViewers(contentId);
     }
 }
