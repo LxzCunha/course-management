@@ -16,3 +16,7 @@ export function isForeignKeyViolation(error: unknown): boolean {
         (error.code === FOREIGN_KEY_VIOLATION || error.code === RESTRICT_VIOLATION)
     );
 }
+
+export function getConstraintName(error: unknown): string | undefined {
+    return error instanceof DatabaseError ? error.constraint : undefined;
+}
