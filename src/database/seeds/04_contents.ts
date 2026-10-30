@@ -4,72 +4,72 @@ type ContentData = { title: string; content: string };
 
 const contentsByCourse: Record<string, Record<string, ContentData[]>> = {
     "NODE-101": {
-        "Introdução ao Node.js": [
+        "Introduction to Node.js": [
             {
-                title: "O que é o Node.js",
-                content: "Node.js é um ambiente que executa JavaScript fora do navegador, usando o motor V8.",
+                title: "What is Node.js",
+                content: "Node.js is a runtime that executes JavaScript outside the browser, using the V8 engine.",
             },
         ],
-        "Módulos e npm": [
+        "Modules and npm": [
             {
-                title: "Instalando pacotes com npm",
-                content: "O npm instala dependências listadas no package.json com o comando npm install.",
+                title: "Installing packages with npm",
+                content: "npm installs the dependencies listed in package.json with the npm install command.",
             },
         ],
-        "Programação assíncrona": [
+        "Asynchronous programming": [
             {
-                title: "Entendendo Promises",
-                content: "Uma Promise representa um valor que estará disponível no futuro, ou um erro.",
+                title: "Understanding Promises",
+                content: "A Promise represents a value that will be available in the future, or an error.",
             },
         ],
     },
     "TS-101": {
-        "Tipos básicos": [
+        "Basic types": [
             {
-                title: "string, number e boolean",
-                content: "Os tipos primitivos do TypeScript correspondem aos tipos primitivos do JavaScript.",
+                title: "string, number and boolean",
+                content: "TypeScript's primitive types match JavaScript's primitive types.",
             },
             {
-                title: "Arrays e tuplas",
-                content: "Arrays guardam vários valores do mesmo tipo; tuplas têm tamanho e tipos fixos por posição.",
+                title: "Arrays and tuples",
+                content: "Arrays hold many values of the same type; tuples have a fixed length and a type per position.",
             },
         ],
-        "Interfaces e tipos": [
+        "Interfaces and types": [
             {
-                title: "Criando interfaces",
-                content: "Uma interface descreve o formato de um objeto: suas propriedades e seus tipos.",
+                title: "Creating interfaces",
+                content: "An interface describes the shape of an object: its properties and their types.",
             },
             {
                 title: "type vs interface",
-                content: "Ambos descrevem objetos; type também aceita uniões e tipos primitivos.",
+                content: "Both describe objects; type also supports unions and primitive types.",
             },
         ],
         Generics: [
             {
-                title: "Funções genéricas",
-                content: "Generics permitem escrever funções que funcionam com vários tipos sem perder a tipagem.",
+                title: "Generic functions",
+                content: "Generics let a function work with many types without losing type safety.",
             },
         ],
     },
     "SQL-101": {
-        "Consultas básicas": [
+        "Basic queries": [
             {
-                title: "SELECT e WHERE",
-                content: "SELECT escolhe as colunas e WHERE filtra as linhas retornadas pela consulta.",
+                title: "SELECT and WHERE",
+                content: "SELECT picks the columns and WHERE filters the rows returned by the query.",
             },
             {
-                title: "Ordenação com ORDER BY",
-                content: "ORDER BY ordena o resultado por uma ou mais colunas, em ordem crescente ou decrescente.",
+                title: "Sorting with ORDER BY",
+                content: "ORDER BY sorts the result by one or more columns, in ascending or descending order.",
             },
         ],
-        "Relacionamentos e JOINs": [
+        "Relationships and JOINs": [
             {
                 title: "INNER JOIN",
-                content: "INNER JOIN retorna apenas as linhas que têm correspondência nas duas tabelas.",
+                content: "INNER JOIN returns only the rows that have a match in both tables.",
             },
             {
                 title: "LEFT JOIN",
-                content: "LEFT JOIN retorna todas as linhas da tabela da esquerda, mesmo sem correspondência.",
+                content: "LEFT JOIN returns every row from the left table, even without a match.",
             },
         ],
     },

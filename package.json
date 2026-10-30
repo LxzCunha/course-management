@@ -21,7 +21,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/server",
     "knex": "tsx --env-file=.env node_modules/knex/bin/cli.js --knexfile src/database/knexfile.ts",
     "migrate:make": "npm run knex -- migrate:make",
     "migrate:latest": "npm run knex -- migrate:latest",

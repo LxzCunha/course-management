@@ -9,32 +9,32 @@ export async function seed(knex: Knex): Promise<void> {
     await knex("courses").insert([
         {
             code: "NODE-101",
-            title: "Node.js do Zero",
-            description: "Fundamentos do Node.js para construir aplicações no servidor.",
+            title: "Node.js from Scratch",
+            description: "Node.js fundamentals for building server-side applications.",
             user_id: userId["ana.souza@example.com"],
         },
         {
             code: "TS-101",
-            title: "TypeScript na Prática",
-            description: "Tipagem estática em JavaScript, do básico aos generics.",
+            title: "TypeScript in Practice",
+            description: "Static typing for JavaScript, from the basics to generics.",
             user_id: userId["bruno.lima@example.com"],
         },
         {
             code: "SQL-101",
-            title: "Fundamentos de SQL com PostgreSQL",
-            description: "Consultas, filtros e relacionamentos em bancos relacionais.",
+            title: "SQL Fundamentals with PostgreSQL",
+            description: "Queries, filters and relationships in relational databases.",
             user_id: userId["carla.mendes@example.com"],
         },
         {
             code: "GIT-101",
-            title: "Git e GitHub",
-            description: "Versionamento de código e colaboração em equipe.",
+            title: "Git and GitHub",
+            description: "Source control and team collaboration.",
             user_id: userId["diego.santos@example.com"],
         },
         {
             code: "DOCKER-101",
-            title: "Docker para Desenvolvedores",
-            description: "Containers, imagens e Docker Compose no dia a dia.",
+            title: "Docker for Developers",
+            description: "Containers, images and Docker Compose in everyday work.",
             user_id: userId["ana.souza@example.com"],
         },
     ]);

@@ -1,8 +1,11 @@
 import { Global, Inject, Module, OnApplicationShutdown } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Pool } from "pg";
+import { Pool, types } from "pg";
 
 export const PG_POOL = Symbol("PG_POOL");
+
+// Return BIGINT columns (ids and COUNT results) as numbers instead of strings
+types.setTypeParser(types.builtins.INT8, Number);
 
 @Global()
 @Module({
