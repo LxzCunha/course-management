@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
 import type { CreateCourseDto } from "../dto/CreateCourseDto.js";
 import type { UpdateCourseDto } from "../dto/UpdateCourseDto.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../errors/DatabaseErrors.js";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { CoursesRepository } from "../repository/CoursesRepository.js";
 
 @Injectable()
@@ -15,7 +16,7 @@ export class CoursesService {
     async findById(id: number) {
         const course = await this.coursesRepository.findById(id);
         if (!course) {
-            throw new NotFoundException(`Course ${id} not found`);
+            throw new NotFoundError("Course", id);
         }
         return course;
     }
@@ -29,7 +30,7 @@ export class CoursesService {
             .update(id, data)
             .catch((error) => this.rethrowConstraintError(error, data));
         if (!course) {
-            throw new NotFoundException(`Course ${id} not found`);
+            throw new NotFoundError("Course", id);
         }
         return course;
     }
@@ -37,7 +38,7 @@ export class CoursesService {
     async delete(id: number) {
         const deleted = await this.coursesRepository.delete(id);
         if (!deleted) {
-            throw new NotFoundException(`Course ${id} not found`);
+            throw new NotFoundError("Course", id);
         }
     }
 

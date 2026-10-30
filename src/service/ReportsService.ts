@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { ReportsRepository } from "../repository/ReportsRepository.js";
 
 @Injectable()
@@ -23,7 +24,7 @@ export class ReportsService {
 
     async getContentViewers(contentId: number) {
         if (!(await this.reportsRepository.contentExists(contentId))) {
-            throw new NotFoundException(`Content ${contentId} not found`);
+            throw new NotFoundError("Content", contentId);
         }
         return this.reportsRepository.findContentViewers(contentId);
     }

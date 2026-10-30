@@ -1,7 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import type { CreateUserDto } from "../dto/CreateUserDto.js";
 import type { UpdateUserDto } from "../dto/UpdateUserDto.js";
 import { isForeignKeyViolation, isUniqueViolation } from "../errors/DatabaseErrors.js";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { UsersRepository } from "../repository/UsersRepository.js";
 
 @Injectable()
@@ -15,7 +16,7 @@ export class UsersService {
     async findById(id: number) {
         const user = await this.usersRepository.findById(id);
         if (!user) {
-            throw new NotFoundException(`User ${id} not found`);
+            throw new NotFoundError("User", id);
         }
         return user;
     }
@@ -31,7 +32,7 @@ export class UsersService {
             .update(id, data)
             .catch((error) => this.rethrowEmailConflict(error, data.email));
         if (!user) {
-            throw new NotFoundException(`User ${id} not found`);
+            throw new NotFoundError("User", id);
         }
         return user;
     }
@@ -44,7 +45,7 @@ export class UsersService {
             throw error;
         });
         if (!deleted) {
-            throw new NotFoundException(`User ${id} not found`);
+            throw new NotFoundError("User", id);
         }
     }
 

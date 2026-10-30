@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import type { CreateContentDto } from "../dto/CreateContentDto.js";
 import type { UpdateContentDto } from "../dto/UpdateContentDto.js";
 import { isForeignKeyViolation } from "../errors/DatabaseErrors.js";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { ContentsRepository } from "../repository/ContentsRepository.js";
 
 @Injectable()
@@ -15,7 +16,7 @@ export class ContentsService {
     async findById(id: number) {
         const content = await this.contentsRepository.findById(id);
         if (!content) {
-            throw new NotFoundException(`Content ${id} not found`);
+            throw new NotFoundError("Content", id);
         }
         return content;
     }
@@ -29,7 +30,7 @@ export class ContentsService {
             .update(id, data)
             .catch((error) => this.rethrowConstraintError(error, data));
         if (!content) {
-            throw new NotFoundException(`Content ${id} not found`);
+            throw new NotFoundError("Content", id);
         }
         return content;
     }
@@ -37,7 +38,7 @@ export class ContentsService {
     async delete(id: number) {
         const deleted = await this.contentsRepository.delete(id);
         if (!deleted) {
-            throw new NotFoundException(`Content ${id} not found`);
+            throw new NotFoundError("Content", id);
         }
     }
 

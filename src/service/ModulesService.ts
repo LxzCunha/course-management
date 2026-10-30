@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import type { CreateModuleDto } from "../dto/CreateModuleDto.js";
 import type { UpdateModuleDto } from "../dto/UpdateModuleDto.js";
 import { getConstraintName, isForeignKeyViolation } from "../errors/DatabaseErrors.js";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { ModulesRepository } from "../repository/ModulesRepository.js";
 
 @Injectable()
@@ -15,7 +16,7 @@ export class ModulesService {
     async findById(id: number) {
         const module = await this.modulesRepository.findById(id);
         if (!module) {
-            throw new NotFoundException(`Module ${id} not found`);
+            throw new NotFoundError("Module", id);
         }
         return module;
     }
@@ -29,7 +30,7 @@ export class ModulesService {
             .update(id, data)
             .catch((error) => this.rethrowConstraintError(error, data));
         if (!module) {
-            throw new NotFoundException(`Module ${id} not found`);
+            throw new NotFoundError("Module", id);
         }
         return module;
     }
@@ -37,7 +38,7 @@ export class ModulesService {
     async delete(id: number) {
         const deleted = await this.modulesRepository.delete(id);
         if (!deleted) {
-            throw new NotFoundException(`Module ${id} not found`);
+            throw new NotFoundError("Module", id);
         }
     }
 
