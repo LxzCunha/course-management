@@ -1,0 +1,2378 @@
+{
+  "info": {
+    "_postman_id": "58f3cd7c-84b8-4520-a19c-d5470406eee3",
+    "name": "Course Management API",
+    "description": "Collection para testar a **Course Management API** (NestJS + PostgreSQL): CRUD de usuários, cursos, módulos e conteúdos, relatórios e casos de erro. Cada requisição tem testes automáticos (aba **Tests**/**Scripts**).\n\n## Antes de começar\n\n1. Suba o banco e a API, como no README: `docker compose up -d`, `npm run migrate:latest`, `npm run seed:run` e `npm run start:dev`.\n2. Confira a variável `baseUrl` da collection (padrão: `http://localhost:3000`).\n\n## Rodando todos os testes\n\n- **No Postman:** clique nos três pontos da collection → **Run collection** → **Run**. As pastas rodam em ordem: criam um usuário, um curso, um módulo e um conteúdo, testam consultas, relatórios e erros e, no fim, excluem tudo o que foi criado.\n- **No terminal (Newman):** `npx newman run course-management.postman_collection.json`\n\n## Rodando requisições soltas\n\nOs IDs criados ficam salvos nas variáveis da collection (`userId`, `courseId`, `moduleId`, `contentId`). Rode antes o **Criar...** de cada pasta, nesta ordem: Usuários → Cursos → Módulos → Conteúdos.\n\n## Variáveis\n\n| Variável | Para que serve |\n| --- | --- |\n| `baseUrl` | Endereço da API |\n| `missingId` | ID que não existe, usado nos testes de erro |\n| `seedContentId` | Conteúdo dos seeds usado no relatório de visualizações |\n| As demais | Preenchidas automaticamente pelos scripts durante a execução |\n\nAlém dos testes de cada requisição, toda resposta é conferida pelos testes gerais da collection: o corpo deve ser JSON e os erros `4xx` devem seguir o formato `{ message, error, statusCode }`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Usuários",
+      "description": "CRUD de usuários. **Criar usuário** gera um sufixo único (`runId`) para o e-mail não se repetir entre execuções e guarda o `userId` para as próximas pastas.",
+      "item": [
+        {
+          "name": "Criar usuário",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Sufixo único por execução: evita e-mail e código de curso repetidos",
+                  "pm.collectionVariables.set(\"runId\", Date.now().toString());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const user = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o usuário criado, com id e datas\", () => {",
+                  "    pm.expect(user).to.have.all.keys(\"id\", \"name\", \"email\", \"status\", \"createdAt\", \"updatedAt\");",
+                  "    pm.expect(user.id).to.be.a(\"number\");",
+                  "    pm.expect(user.name).to.eql(\"Fernanda Alves\");",
+                  "    pm.expect(user.email).to.eql(`fernanda.${pm.collectionVariables.get(\"runId\")}@example.com`);",
+                  "});",
+                  "",
+                  "pm.test(\"O status padrão é \\\"active\\\"\", () => pm.expect(user.status).to.eql(\"active\"));",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    // Guarda os dados para as próximas requisições",
+                  "    pm.collectionVariables.set(\"userId\", user.id);",
+                  "    pm.collectionVariables.set(\"userEmail\", user.email);",
+                  "    pm.collectionVariables.set(\"userUpdatedAt\", user.updatedAt);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Cria um usuário sem informar `status`, para conferir que o padrão é `active`. Guarda `userId` e `userEmail` nas variáveis da collection.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fernanda Alves\",\n  \"email\": \"fernanda.{{runId}}@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar usuários",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const items = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna uma lista ordenada por id\", () => {",
+                  "    pm.expect(items).to.be.an(\"array\");",
+                  "    const ids = items.map(item => item.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));",
+                  "});",
+                  "",
+                  "pm.test(\"A lista contém o usuário criado\", () => {",
+                  "    pm.expect(items.map(item => item.id)).to.include(Number(pm.collectionVariables.get(\"userId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Lista todos os usuários, ordenados por `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar usuário por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const user = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o usuário pedido\", () => {",
+                  "    pm.expect(user.id).to.eql(Number(pm.collectionVariables.get(\"userId\")));",
+                  "    pm.expect(user.email).to.eql(pm.collectionVariables.get(\"userEmail\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Busca o usuário criado pelo `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar status do usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const user = pm.response.json();",
+                  "",
+                  "pm.test(\"O status mudou para \\\"inactive\\\"\", () => pm.expect(user.status).to.eql(\"inactive\"));",
+                  "",
+                  "pm.test(\"Os campos não enviados continuam iguais\", () => {",
+                  "    pm.expect(user.name).to.eql(\"Fernanda Alves\");",
+                  "    pm.expect(user.email).to.eql(pm.collectionVariables.get(\"userEmail\"));",
+                  "});",
+                  "",
+                  "pm.test(\"O updatedAt foi atualizado\", () => {",
+                  "    const before = new Date(pm.collectionVariables.get(\"userUpdatedAt\")).getTime();",
+                  "    pm.expect(new Date(user.updatedAt).getTime()).to.be.above(before);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Atualização parcial: envia só o `status`. Os demais campos devem continuar iguais e o `updatedAt` deve mudar.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Cursos",
+      "description": "CRUD de cursos. O curso é criado com o usuário da pasta anterior como autor.",
+      "item": [
+        {
+          "name": "Criar curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const course = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o curso criado\", () => {",
+                  "    pm.expect(course).to.have.all.keys(\"id\", \"code\", \"title\", \"description\", \"userId\", \"createdAt\", \"updatedAt\");",
+                  "    pm.expect(course.code).to.eql(`REACT-${pm.collectionVariables.get(\"runId\")}`);",
+                  "    pm.expect(course.title).to.eql(\"React do Zero\");",
+                  "    pm.expect(course.description).to.eql(\"Componentes, props e hooks.\");",
+                  "});",
+                  "",
+                  "pm.test(\"O autor é o usuário criado\", () => {",
+                  "    pm.expect(course.userId).to.eql(Number(pm.collectionVariables.get(\"userId\")));",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"courseId\", course.id);",
+                  "    pm.collectionVariables.set(\"courseCode\", course.code);",
+                  "    pm.collectionVariables.set(\"courseTitle\", course.title);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Cria um curso cujo autor é o usuário criado. O `code` precisa ser único, por isso usa o `runId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"REACT-{{runId}}\",\n  \"title\": \"React do Zero\",\n  \"description\": \"Componentes, props e hooks.\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar cursos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const items = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna uma lista ordenada por id\", () => {",
+                  "    pm.expect(items).to.be.an(\"array\");",
+                  "    const ids = items.map(item => item.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));",
+                  "});",
+                  "",
+                  "pm.test(\"A lista contém o curso criado\", () => {",
+                  "    pm.expect(items.map(item => item.id)).to.include(Number(pm.collectionVariables.get(\"courseId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Lista todos os cursos, ordenados por `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar curso por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const course = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o curso pedido\", () => {",
+                  "    pm.expect(course.id).to.eql(Number(pm.collectionVariables.get(\"courseId\")));",
+                  "    pm.expect(course.code).to.eql(pm.collectionVariables.get(\"courseCode\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}"
+              ]
+            },
+            "description": "Busca o curso criado pelo `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar título do curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const course = pm.response.json();",
+                  "",
+                  "pm.test(\"O título foi alterado\", () => pm.expect(course.title).to.eql(\"React na Prática\"));",
+                  "",
+                  "pm.test(\"Código e descrição continuam iguais\", () => {",
+                  "    pm.expect(course.code).to.eql(pm.collectionVariables.get(\"courseCode\"));",
+                  "    pm.expect(course.description).to.eql(\"Componentes, props e hooks.\");",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set(\"courseTitle\", course.title);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}"
+              ]
+            },
+            "description": "Atualização parcial: envia só o `title`. Código e descrição devem continuar iguais.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"React na Prática\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remover descrição do curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const course = pm.response.json();",
+                  "",
+                  "pm.test(\"A descrição foi removida (null)\", () => pm.expect(course.description).to.be.null);",
+                  "",
+                  "pm.test(\"O título continua igual\", () => {",
+                  "    pm.expect(course.title).to.eql(pm.collectionVariables.get(\"courseTitle\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}"
+              ]
+            },
+            "description": "Em `description`, enviar `null` apaga o valor. Nos campos obrigatórios, `null` é ignorado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Módulos",
+      "description": "CRUD de módulos. O módulo é criado dentro do curso da pasta anterior.",
+      "item": [
+        {
+          "name": "Criar módulo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const module = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o módulo criado\", () => {",
+                  "    pm.expect(module).to.have.all.keys(\"id\", \"courseId\", \"title\", \"description\", \"userId\", \"createdAt\", \"updatedAt\");",
+                  "    pm.expect(module.title).to.eql(\"Hooks\");",
+                  "});",
+                  "",
+                  "pm.test(\"O módulo pertence ao curso criado\", () => {",
+                  "    pm.expect(module.courseId).to.eql(Number(pm.collectionVariables.get(\"courseId\")));",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"moduleId\", module.id);",
+                  "    pm.collectionVariables.set(\"moduleTitle\", module.title);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules"
+              ]
+            },
+            "description": "Cria um módulo no curso criado, com o mesmo usuário como autor.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{courseId}},\n  \"title\": \"Hooks\",\n  \"description\": \"useState e useEffect.\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar módulos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const items = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna uma lista ordenada por id\", () => {",
+                  "    pm.expect(items).to.be.an(\"array\");",
+                  "    const ids = items.map(item => item.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));",
+                  "});",
+                  "",
+                  "pm.test(\"A lista contém o módulo criado\", () => {",
+                  "    pm.expect(items.map(item => item.id)).to.include(Number(pm.collectionVariables.get(\"moduleId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules"
+              ]
+            },
+            "description": "Lista todos os módulos, ordenados por `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar módulo por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const module = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o módulo pedido\", () => {",
+                  "    pm.expect(module.id).to.eql(Number(pm.collectionVariables.get(\"moduleId\")));",
+                  "    pm.expect(module.courseId).to.eql(Number(pm.collectionVariables.get(\"courseId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleId}}"
+              ]
+            },
+            "description": "Busca o módulo criado pelo `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar título do módulo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const module = pm.response.json();",
+                  "",
+                  "pm.test(\"O título foi alterado\", () => pm.expect(module.title).to.eql(\"Hooks essenciais\"));",
+                  "",
+                  "pm.test(\"Curso e descrição continuam iguais\", () => {",
+                  "    pm.expect(module.courseId).to.eql(Number(pm.collectionVariables.get(\"courseId\")));",
+                  "    pm.expect(module.description).to.eql(\"useState e useEffect.\");",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set(\"moduleTitle\", module.title);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleId}}"
+              ]
+            },
+            "description": "Atualização parcial: envia só o `title`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hooks essenciais\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Conteúdos",
+      "description": "CRUD de conteúdos (aulas). O conteúdo é criado dentro do módulo da pasta anterior.",
+      "item": [
+        {
+          "name": "Criar conteúdo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "const content = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o conteúdo criado\", () => {",
+                  "    pm.expect(content).to.have.all.keys(\"id\", \"moduleId\", \"title\", \"content\", \"createdAt\", \"updatedAt\");",
+                  "    pm.expect(content.title).to.eql(\"Entendendo o useState\");",
+                  "});",
+                  "",
+                  "pm.test(\"O conteúdo pertence ao módulo criado\", () => {",
+                  "    pm.expect(content.moduleId).to.eql(Number(pm.collectionVariables.get(\"moduleId\")));",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"contentId\", content.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents"
+              ]
+            },
+            "description": "Cria um conteúdo no módulo criado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"moduleId\": {{moduleId}},\n  \"title\": \"Entendendo o useState\",\n  \"content\": \"useState guarda um valor que, quando muda, faz o componente renderizar de novo.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar conteúdos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const items = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna uma lista ordenada por id\", () => {",
+                  "    pm.expect(items).to.be.an(\"array\");",
+                  "    const ids = items.map(item => item.id);",
+                  "    pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));",
+                  "});",
+                  "",
+                  "pm.test(\"A lista contém o conteúdo criado\", () => {",
+                  "    pm.expect(items.map(item => item.id)).to.include(Number(pm.collectionVariables.get(\"contentId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents"
+              ]
+            },
+            "description": "Lista todos os conteúdos, ordenados por `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar conteúdo por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const content = pm.response.json();",
+                  "",
+                  "pm.test(\"Retorna o conteúdo pedido\", () => {",
+                  "    pm.expect(content.id).to.eql(Number(pm.collectionVariables.get(\"contentId\")));",
+                  "    pm.expect(content.moduleId).to.eql(Number(pm.collectionVariables.get(\"moduleId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contents/{{contentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents",
+                "{{contentId}}"
+              ]
+            },
+            "description": "Busca o conteúdo criado pelo `id`."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar texto do conteúdo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const content = pm.response.json();",
+                  "",
+                  "pm.test(\"O texto foi alterado\", () => {",
+                  "    pm.expect(content.content).to.eql(\"useState retorna o valor atual e uma função para alterá-lo.\");",
+                  "});",
+                  "",
+                  "pm.test(\"Título e módulo continuam iguais\", () => {",
+                  "    pm.expect(content.title).to.eql(\"Entendendo o useState\");",
+                  "    pm.expect(content.moduleId).to.eql(Number(pm.collectionVariables.get(\"moduleId\")));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contents/{{contentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents",
+                "{{contentId}}"
+              ]
+            },
+            "description": "Atualização parcial: envia só o `content`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"useState retorna o valor atual e uma função para alterá-lo.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Relatórios",
+      "description": "Relatórios em SQL (somente leitura). Os testes conferem a estrutura das respostas e os dados criados nas pastas anteriores. **Quem visualizou um conteúdo dos seeds** depende dos dados de exemplo (`npm run seed:run`).",
+      "item": [
+        {
+          "name": "Usuários com mais cursos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const ranking = pm.response.json();",
+                  "",
+                  "pm.test(\"Cada item tem os campos do ranking\", () => {",
+                  "    pm.expect(ranking).to.be.an(\"array\").that.is.not.empty;",
+                  "    ranking.forEach(item => pm.expect(item).to.have.all.keys(\"id\", \"name\", \"email\", \"courseCount\", \"rank\"));",
+                  "});",
+                  "",
+                  "pm.test(\"Ordenado do maior para o menor número de cursos\", () => {",
+                  "    for (let i = 1; i < ranking.length; i++) {",
+                  "        pm.expect(ranking[i].courseCount).to.be.at.most(ranking[i - 1].courseCount);",
+                  "        pm.expect(ranking[i].rank).to.be.at.least(ranking[i - 1].rank);",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"O primeiro colocado tem rank 1\", () => pm.expect(ranking[0].rank).to.eql(1));",
+                  "",
+                  "pm.test(\"O usuário criado aparece com 1 curso\", () => {",
+                  "    const user = ranking.find(item => item.id === Number(pm.collectionVariables.get(\"userId\")));",
+                  "    pm.expect(user, \"usuário não encontrado no ranking\").to.exist;",
+                  "    pm.expect(user.courseCount).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/users-with-most-courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "users-with-most-courses"
+              ]
+            },
+            "description": "Ranking de todos os usuários pela quantidade de cursos de que são autores. Usa `RANK()`: empatados ficam na mesma posição."
+          },
+          "response": []
+        },
+        {
+          "name": "Visão geral dos cursos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const overview = pm.response.json();",
+                  "",
+                  "pm.test(\"Cada item tem as contagens de módulos e conteúdos\", () => {",
+                  "    pm.expect(overview).to.be.an(\"array\").that.is.not.empty;",
+                  "    overview.forEach(item => pm.expect(item).to.have.all.keys(\"id\", \"code\", \"title\", \"moduleCount\", \"contentCount\"));",
+                  "});",
+                  "",
+                  "pm.test(\"O curso criado tem 1 módulo e 1 conteúdo\", () => {",
+                  "    const course = overview.find(item => item.id === Number(pm.collectionVariables.get(\"courseId\")));",
+                  "    pm.expect(course, \"curso não encontrado\").to.exist;",
+                  "    pm.expect(course.moduleCount).to.eql(1);",
+                  "    pm.expect(course.contentCount).to.eql(1);",
+                  "});",
+                  "",
+                  "// Guarda o maior número de conteúdos e os cursos que têm esse número",
+                  "const max = Math.max(...overview.map(item => item.contentCount));",
+                  "const topIds = overview.filter(item => item.contentCount === max).map(item => item.id);",
+                  "pm.collectionVariables.set(\"maxContentCount\", max);",
+                  "pm.collectionVariables.set(\"topCourseIds\", JSON.stringify(topIds.sort((a, b) => a - b)));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/courses-overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "courses-overview"
+              ]
+            },
+            "description": "Todos os cursos com a quantidade de módulos e de conteúdos. Também guarda o maior `contentCount` para conferir o próximo relatório."
+          },
+          "response": []
+        },
+        {
+          "name": "Curso com mais conteúdos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const top = pm.response.json();",
+                  "",
+                  "pm.test(\"Cada item tem id, code, title e contentCount\", () => {",
+                  "    pm.expect(top).to.be.an(\"array\").that.is.not.empty;",
+                  "    top.forEach(item => pm.expect(item).to.have.all.keys(\"id\", \"code\", \"title\", \"contentCount\"));",
+                  "});",
+                  "",
+                  "const expectedIds = pm.collectionVariables.get(\"topCourseIds\");",
+                  "if (expectedIds) {",
+                  "    pm.test(\"Retorna todos os cursos com o maior número de conteúdos (inclusive empates)\", () => {",
+                  "        top.forEach(item => pm.expect(item.contentCount).to.eql(Number(pm.collectionVariables.get(\"maxContentCount\"))));",
+                  "        pm.expect(top.map(item => item.id).sort((a, b) => a - b)).to.eql(JSON.parse(expectedIds));",
+                  "    });",
+                  "} else {",
+                  "    console.log(\"Rode 'Visão geral dos cursos' antes para conferir os empates.\");",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/courses-with-most-contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "courses-with-most-contents"
+              ]
+            },
+            "description": "O curso com mais conteúdos. Em caso de empate, todos os empatados são retornados (`FETCH FIRST 1 ROWS WITH TIES`). Rode **Visão geral dos cursos** antes para o teste de empates."
+          },
+          "response": []
+        },
+        {
+          "name": "Conteúdos com módulo e curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const contents = pm.response.json();",
+                  "",
+                  "pm.test(\"Cada item tem o título do módulo e do curso\", () => {",
+                  "    pm.expect(contents).to.be.an(\"array\").that.is.not.empty;",
+                  "    contents.forEach(item => pm.expect(item).to.have.all.keys(\"id\", \"title\", \"moduleTitle\", \"courseTitle\"));",
+                  "});",
+                  "",
+                  "pm.test(\"O conteúdo criado aparece com o módulo e o curso certos\", () => {",
+                  "    const content = contents.find(item => item.id === Number(pm.collectionVariables.get(\"contentId\")));",
+                  "    pm.expect(content, \"conteúdo não encontrado\").to.exist;",
+                  "    pm.expect(content.moduleTitle).to.eql(pm.collectionVariables.get(\"moduleTitle\"));",
+                  "    pm.expect(content.courseTitle).to.eql(pm.collectionVariables.get(\"courseTitle\"));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "contents"
+              ]
+            },
+            "description": "Cada conteúdo com o título do seu módulo e do seu curso."
+          },
+          "response": []
+        },
+        {
+          "name": "Quem visualizou o conteúdo criado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test(\"Ninguém visualizou o conteúdo novo (lista vazia)\", () => {",
+                  "    pm.expect(pm.response.json()).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/contents/{{contentId}}/viewers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "contents",
+                "{{contentId}}",
+                "viewers"
+              ]
+            },
+            "description": "O conteúdo acabou de ser criado e a API não tem endpoint para registrar visualizações, então a lista vem vazia."
+          },
+          "response": []
+        },
+        {
+          "name": "Quem visualizou um conteúdo dos seeds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200 OK\", () => pm.response.to.have.status(200));",
+                  "",
+                  "const viewers = pm.response.json();",
+                  "",
+                  "pm.test(\"Cada item tem id, name, email e viewedAt\", () => {",
+                  "    pm.expect(viewers).to.be.an(\"array\");",
+                  "    viewers.forEach(item => pm.expect(item).to.have.all.keys(\"id\", \"name\", \"email\", \"viewedAt\"));",
+                  "});",
+                  "",
+                  "pm.test(\"Ordenado pela data de visualização\", () => {",
+                  "    const times = viewers.map(item => new Date(item.viewedAt).getTime());",
+                  "    pm.expect(times).to.eql([...times].sort((a, b) => a - b));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/contents/{{seedContentId}}/viewers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "contents",
+                "{{seedContentId}}",
+                "viewers"
+              ]
+            },
+            "description": "Usa o conteúdo `seedContentId` (padrão: 1, \"What is Node.js\"), que nos seeds tem visualizações. Requer `npm run seed:run`."
+          },
+          "response": []
+        },
+        {
+          "name": "Visualizações de conteúdo inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Mensagem informa que o conteúdo não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Content ${pm.collectionVariables.get(\"missingId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/contents/{{missingId}}/viewers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "contents",
+                "{{missingId}}",
+                "viewers"
+              ]
+            },
+            "description": "Conteúdo que não existe: a API responde `404`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Erros e validações",
+      "description": "Casos de erro esperados: validação do corpo (`400`), registros relacionados inexistentes (`400`), registros não encontrados (`404`) e conflitos (`409`). Nenhuma dessas requisições altera o banco.",
+      "item": [
+        {
+          "name": "Usuário com dados inválidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Lista todos os problemas de validação\", () => {",
+                  "    const { message } = pm.response.json();",
+                  "    pm.expect(message).to.be.an(\"array\");",
+                  "    pm.expect(message).to.include.members([\"name should not be empty\", \"email must be an email\", \"status must be one of the following values: active, inactive\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Nome vazio, e-mail inválido e status fora da lista. A API devolve todos os problemas de uma vez, em uma lista.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"email\": \"nao-e-email\",\n  \"status\": \"banned\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Campo desconhecido no corpo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Informa o campo que não deveria existir\", () => {",
+                  "    const { message } = pm.response.json();",
+                  "    pm.expect(message).to.be.an(\"array\");",
+                  "    pm.expect(message).to.include.members([\"property idade should not exist\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Campos que não existem no DTO são rejeitados (`forbidNonWhitelisted`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Teste\",\n  \"email\": \"teste.{{runId}}@example.com\",\n  \"idade\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Tipo errado (userId como texto)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Informa que userId precisa ser inteiro\", () => {",
+                  "    const { message } = pm.response.json();",
+                  "    pm.expect(message).to.be.an(\"array\");",
+                  "    pm.expect(message).to.include.members([\"userId must be an integer number\"]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "A API não converte tipos: `\"userId\": \"6\"` (texto) é rejeitado.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TIPO-{{runId}}\",\n  \"title\": \"Curso com userId em texto\",\n  \"userId\": \"{{userId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "E-mail duplicado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409 Conflict\", () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.test(\"Mensagem informa o e-mail em uso\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Email ${pm.collectionVariables.get(\"userEmail\")} is already in use`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Tenta criar outro usuário com o e-mail do usuário criado na pasta 1.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Outra pessoa\",\n  \"email\": \"{{userEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Código de curso duplicado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409 Conflict\", () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.test(\"Mensagem informa o código em uso\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Course code ${pm.collectionVariables.get(\"courseCode\")} is already in use`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Tenta criar outro curso com o código do curso criado na pasta 2.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"{{courseCode}}\",\n  \"title\": \"Outro curso\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Curso com autor inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Mensagem informa que o usuário não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`User ${pm.collectionVariables.get(\"missingId\")} does not exist`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "`userId` que não existe: o PostgreSQL rejeita pela chave estrangeira e a API traduz para `400`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SEMAUTOR-{{runId}}\",\n  \"title\": \"Curso sem autor\",\n  \"userId\": {{missingId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Módulo em curso inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Mensagem informa que o curso não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Course ${pm.collectionVariables.get(\"missingId\")} does not exist`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules"
+              ]
+            },
+            "description": "`courseId` que não existe.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{missingId}},\n  \"title\": \"Módulo sem curso\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Módulo com autor inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Mensagem informa que o usuário não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`User ${pm.collectionVariables.get(\"missingId\")} does not exist`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules"
+              ]
+            },
+            "description": "`userId` que não existe. A API identifica qual chave estrangeira falhou pelo nome da constraint.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{courseId}},\n  \"title\": \"Módulo sem autor\",\n  \"userId\": {{missingId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Conteúdo em módulo inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Mensagem informa que o módulo não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Module ${pm.collectionVariables.get(\"missingId\")} does not exist`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents"
+              ]
+            },
+            "description": "`moduleId` que não existe.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"moduleId\": {{missingId}},\n  \"title\": \"Aula sem módulo\",\n  \"content\": \"Texto da aula.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ID não numérico na URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "",
+                  "pm.test(\"Mensagem de ID inválido\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Validation failed (numeric string is expected)\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/abc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "abc"
+              ]
+            },
+            "description": "O `ParseIdPipe` rejeita IDs que não são números inteiros."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar curso inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Mensagem informa que o curso não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Course ${pm.collectionVariables.get(\"missingId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{missingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{missingId}}"
+              ]
+            },
+            "description": "Registro que não existe: `404`."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar módulo inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Mensagem informa que o módulo não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Module ${pm.collectionVariables.get(\"missingId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{missingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{missingId}}"
+              ]
+            },
+            "description": "`PATCH` em registro que não existe: `404`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Novo título\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir conteúdo inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Mensagem informa que o conteúdo não existe\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Content ${pm.collectionVariables.get(\"missingId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contents/{{missingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents",
+                "{{missingId}}"
+              ]
+            },
+            "description": "`DELETE` em registro que não existe: `404`."
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir usuário que é autor de curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409 Conflict\", () => pm.response.to.have.status(409));",
+                  "",
+                  "pm.test(\"Mensagem informa por que não pode excluir\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`User ${pm.collectionVariables.get(\"userId\")} has courses or modules and cannot be deleted`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "O usuário criado é autor de um curso e de um módulo, então a exclusão é bloqueada (`ON DELETE RESTRICT`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Rota inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"Mensagem informa a rota não encontrada\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(\"Cannot GET /nao-existe\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/nao-existe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "nao-existe"
+              ]
+            },
+            "description": "Rota que não existe na API: `404` padrão do NestJS."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Exclusão em cascata",
+      "description": "Cria um curso temporário com um módulo e um conteúdo, exclui só o curso e confere que o módulo e o conteúdo foram excluídos junto (`ON DELETE CASCADE`).",
+      "item": [
+        {
+          "name": "Criar curso temporário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"tempCourseId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Curso que será excluído nesta pasta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TEMP-{{runId}}\",\n  \"title\": \"Curso temporário\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar módulo temporário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"tempModuleId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/modules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules"
+              ]
+            },
+            "description": "Módulo dentro do curso temporário.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": {{tempCourseId}},\n  \"title\": \"Módulo temporário\",\n  \"userId\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Criar conteúdo temporário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201 Created\", () => pm.response.to.have.status(201));",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"tempContentId\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents"
+              ]
+            },
+            "description": "Conteúdo dentro do módulo temporário.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"moduleId\": {{tempModuleId}},\n  \"title\": \"Conteúdo temporário\",\n  \"content\": \"Este conteúdo deve sumir junto com o curso.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir curso temporário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Resposta sem corpo\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{tempCourseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{tempCourseId}}"
+              ]
+            },
+            "description": "Exclui só o curso."
+          },
+          "response": []
+        },
+        {
+          "name": "Módulo foi excluído junto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"O módulo não existe mais\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Module ${pm.collectionVariables.get(\"tempModuleId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{tempModuleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{tempModuleId}}"
+              ]
+            },
+            "description": "O módulo do curso excluído não existe mais."
+          },
+          "response": []
+        },
+        {
+          "name": "Conteúdo foi excluído junto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"O conteúdo não existe mais\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`Content ${pm.collectionVariables.get(\"tempContentId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contents/{{tempContentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents",
+                "{{tempContentId}}"
+              ]
+            },
+            "description": "O conteúdo do módulo excluído não existe mais."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8. Limpeza",
+      "description": "Exclui tudo o que a collection criou, na ordem certa (conteúdo → módulo → curso → usuário). Assim dá para rodar a collection quantas vezes quiser.",
+      "item": [
+        {
+          "name": "Excluir conteúdo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Resposta sem corpo\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contents/{{contentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contents",
+                "{{contentId}}"
+              ]
+            },
+            "description": "Exclui o conteúdo criado na pasta 4."
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir módulo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Resposta sem corpo\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/modules/{{moduleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "modules",
+                "{{moduleId}}"
+              ]
+            },
+            "description": "Exclui o módulo criado na pasta 3."
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Resposta sem corpo\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}"
+              ]
+            },
+            "description": "Exclui o curso criado na pasta 2."
+          },
+          "response": []
+        },
+        {
+          "name": "Excluir usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204 No Content\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Resposta sem corpo\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Agora o usuário não é mais autor de nenhum curso ou módulo, então a exclusão é permitida."
+          },
+          "response": []
+        },
+        {
+          "name": "Usuário excluído não é mais encontrado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404 Not Found\", () => pm.response.to.have.status(404));",
+                  "",
+                  "pm.test(\"O usuário não existe mais\", () => {",
+                  "    pm.expect(pm.response.json().message).to.eql(`User ${pm.collectionVariables.get(\"userId\")} not found`);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "Confirma a exclusão."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Garante um sufixo único mesmo ao rodar uma requisição solta",
+          "if (!pm.collectionVariables.get(\"runId\")) {",
+          "    pm.collectionVariables.set(\"runId\", Date.now().toString());",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Testes gerais, aplicados a todas as requisições",
+          "if (pm.response.code !== 204) {",
+          "    pm.test(\"[geral] Resposta em JSON\", () => pm.response.to.be.json);",
+          "}",
+          "",
+          "if (pm.response.code >= 400 && pm.response.code < 500) {",
+          "    pm.test(\"[geral] Erro no formato { message, error, statusCode }\", () => {",
+          "        const body = pm.response.json();",
+          "        pm.expect(body).to.have.all.keys(\"message\", \"error\", \"statusCode\");",
+          "        pm.expect(body.statusCode).to.eql(pm.response.code);",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "missingId",
+      "value": "999999",
+      "type": "string"
+    },
+    {
+      "key": "seedContentId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userUpdatedAt",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseTitle",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "moduleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "moduleTitle",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "contentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "maxContentCount",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "topCourseIds",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tempCourseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tempModuleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tempContentId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
